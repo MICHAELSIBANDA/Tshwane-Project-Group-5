@@ -1,0 +1,33 @@
+### Health Check
+GET http://localhost:3001/health
+
+###
+
+### Register User
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "mytestuser",
+  "email": "mytestuser@example.com",
+  "password": "mysecurepassword123"
+}
+
+###
+
+### Login User
+# @name login
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "mytestuser@example.com",
+  "password": "mysecurepassword123"
+}
+
+###
+
+### Get Current User Profile (Protected)
+# Assumes you copy the token returned from the Login step and replace it below
+GET http://localhost:3001/api/auth/me
+Authorization: Bearer {{login.response.body.data.token}}
