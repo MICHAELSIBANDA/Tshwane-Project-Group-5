@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PASSENGER
+  DRIVER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum CardStatus {
+  ACTIVE
+  BLOCKED
+  LOST
+  EXPIRED
+  REPLACED
+}
+
+enum CardTransactionType {
+  TOP_UP
+  FARE_DEDUCTION
+  REFUND
+  BALANCE_TRANSFER
+  ADMIN_ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  firstName    String     @map("first_name")
+  surname      String
+  email        String     @unique
+  phoneNumber  String?    @unique @map("phone_number")
+  passwordHash String     @map("password_hash")
+  role         UserRole   @default(PASSENGER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  passengerProfile PassengerProfile?
+  driverProfile    DriverProfile?
+
+  @@map("users")
+}
+
+model PassengerProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards BusCard[]
+
+  @@map("passenger_profiles")
+}
+
+model DriverProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @map("user_id") @db.Uuid
+  employeeNumber String   @unique @map("employee_number")
+  licenceNumber  String?  @map("licence_number")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_profiles")
+}
+
+model BusCard {
+  id          String     @id @default(uuid()) @db.Uuid
+  cardNumber  String     @unique @map("card_number")
+  cardToken   String     @unique @map("card_token")
+  passengerId String     @map("passenger_id") @db.Uuid
+  balance     Decimal    @default(0) @db.Decimal(12, 2)
+  status      CardStatus @default(ACTIVE)
+  issuedAt    DateTime   @default(now()) @map("issued_at") @db.Timestamptz(3)
+  expiresAt   DateTime?  @map("expires_at") @db.Timestamptz(3)
+  blockedAt   DateTime?  @map("blocked_at") @db.Timestamptz(3)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  passenger    PassengerProfile  @relation(fields: [passengerId], references: [id], onDelete: Cascade)
+  transactions CardTransaction[]
+
+  @@index([passengerId])
+  @@map("bus_cards")
+}
+
+model CardTransaction {
+  id            String              @id @default(uuid()) @db.Uuid
+  cardId        String              @map("card_id") @db.Uuid
+  type          CardTransactionType
+  amount        Decimal             @db.Decimal(12, 2)
+  balanceBefore Decimal             @map("balance_before") @db.Decimal(12, 2)
+  balanceAfter  Decimal             @map("balance_after") @db.Decimal(12, 2)
+  status        TransactionStatus   @default(SUCCESSFUL)
+  reference     String              @unique
+  description   String?
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  card BusCard @relation(fields: [cardId], references: [id], onDelete: Restrict)
+
+  @@index([cardId])
+  @@index([createdAt])
+  @@map("card_transactions")
+}
