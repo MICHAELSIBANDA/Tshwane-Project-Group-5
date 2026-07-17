@@ -1,13 +1,22 @@
+import path from 'path';
 import { Pool, Client } from 'pg';
 import dotenv from 'dotenv';
 
-dotenv.config();
+const envPath = path.resolve(process.cwd(), '.env');
+dotenv.config({ path: envPath });
+
+const resolvedHost = process.env.DB_HOST || process.env.PGHOST || 'localhost';
+const isRemoteHost = !['localhost', '127.0.0.1', '::1'].includes(resolvedHost);
+const sslConfig = process.env.DB_SSL === 'true' || process.env.DB_SSL === '1' || isRemoteHost
+  ? { rejectUnauthorized: false }
+  : undefined;
 
 const dbConfig = {
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
+  password: process.env.DB_PASSWORD || '',
+  host: resolvedHost,
   port: parseInt(process.env.DB_PORT || '5432', 10),
+  ...(sslConfig ? { ssl: sslConfig } : {}),
 };
 
 const targetDbName = process.env.DB_NAME || 'auth_db';
@@ -50,6 +59,8 @@ async function ensureDatabaseExists() {
 // Function to initialize the connection pool and run table setup queries
 export async function initDatabase() {
   try {
+    console.log(`Using database host: ${dbConfig.host}`);
+
     // 1. Ensure the DB itself exists
     await ensureDatabaseExists();
 
@@ -64,19 +75,25 @@ export async function initDatabase() {
     console.log(`Connected to database "${targetDbName}" successfully.`);
     client.release();
 
-    // 3. Create the users table if it doesn't exist
+    // 3. Drop existing users table if it has old schema and create new one
+    await pool.query('DROP TABLE IF EXISTS users CASCADE');
+    console.log('Old users table dropped (if existed).');
+
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE users (
         id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
+        full_name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE,
+        phone_number VARCHAR(20) UNIQUE,
         password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'Passenger' CHECK (role IN ('Passenger', 'Driver', 'Admin')),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CHECK (email IS NOT NULL OR phone_number IS NOT NULL)
       );
     `;
     await pool.query(createTableQuery);
-    console.log('Users table checked/created successfully.');
+    console.log('Users table created successfully with new schema.');
 
   } catch (error) {
     console.error('Database initialization failed:', error);

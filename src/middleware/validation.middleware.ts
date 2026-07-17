@@ -3,24 +3,38 @@ import { Request, Response, NextFunction } from 'express';
 // Simple regex for email validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Simple regex for phone number validation (digits, optional leading +, 7-15 digits)
+const phoneRegex = /^\+?[0-9]{7,15}$/;
+
 export function validateRegister(req: Request, res: Response, next: NextFunction): void {
-  const { username, email, password } = req.body;
+  const { full_name, email, phone_number, password } = req.body;
   const errors: { [key: string]: string } = {};
 
-  // Validate username
-  if (!username || typeof username !== 'string') {
-    errors.username = 'Username is required and must be a string.';
-  } else if (username.trim().length < 3 || username.trim().length > 50) {
-    errors.username = 'Username must be between 3 and 50 characters.';
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    errors.username = 'Username can only contain alphanumeric characters, underscores, and hyphens.';
+  // Validate full_name
+  if (!full_name || typeof full_name !== 'string') {
+    errors.full_name = 'Full name is required and must be a string.';
+  } else if (full_name.trim().length < 2 || full_name.trim().length > 100) {
+    errors.full_name = 'Full name must be between 2 and 100 characters.';
   }
 
-  // Validate email
-  if (!email || typeof email !== 'string') {
-    errors.email = 'Email is required and must be a string.';
-  } else if (!emailRegex.test(email)) {
-    errors.email = 'Please provide a valid email address.';
+  // Validate email (optional if phone_number is provided)
+  if (email && typeof email === 'string') {
+    if (!emailRegex.test(email)) {
+      errors.email = 'Please provide a valid email address.';
+    }
+  }
+
+  // Validate phone_number (optional if email is provided)
+  if (phone_number && typeof phone_number === 'string') {
+    if (!phoneRegex.test(phone_number.replace(/[\s\-()]/g, ''))) {
+      errors.phone_number = 'Please provide a valid phone number.';
+    }
+  }
+
+  // At least one of email or phone_number is required
+  if ((!email || typeof email !== 'string' || !email.trim()) && (!phone_number || typeof phone_number !== 'string' || !phone_number.trim())) {
+    errors.email = 'At least one of email or phone number is required.';
+    errors.phone_number = 'At least one of email or phone number is required.';
   }
 
   // Validate password
@@ -43,14 +57,25 @@ export function validateRegister(req: Request, res: Response, next: NextFunction
 }
 
 export function validateLogin(req: Request, res: Response, next: NextFunction): void {
-  const { email, password } = req.body;
+  const { email, phone_number, password } = req.body;
   const errors: { [key: string]: string } = {};
 
-  // Validate email
-  if (!email || typeof email !== 'string') {
-    errors.email = 'Email is required.';
-  } else if (!emailRegex.test(email)) {
-    errors.email = 'Please provide a valid email address.';
+  // Validate email or phone_number (at least one required)
+  if (email && typeof email === 'string') {
+    if (!emailRegex.test(email)) {
+      errors.email = 'Please provide a valid email address.';
+    }
+  }
+
+  if (phone_number && typeof phone_number === 'string') {
+    if (!phoneRegex.test(phone_number.replace(/[\s\-()]/g, ''))) {
+      errors.phone_number = 'Please provide a valid phone number.';
+    }
+  }
+
+  if ((!email || typeof email !== 'string' || !email.trim()) && (!phone_number || typeof phone_number !== 'string' || !phone_number.trim())) {
+    errors.email = 'Email or phone number is required.';
+    errors.phone_number = 'Email or phone number is required.';
   }
 
   // Validate password

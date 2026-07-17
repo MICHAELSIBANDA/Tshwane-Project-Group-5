@@ -6,8 +6,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_m
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
-    username: string;
-    email: string;
+    full_name: string;
+    email: string | null;
+    phone_number: string | null;
+    role: string;
   };
 }
 
@@ -32,8 +34,10 @@ export function authMiddleware(
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: number;
-      username: string;
-      email: string;
+      full_name: string;
+      email: string | null;
+      phone_number: string | null;
+      role: string;
     };
     
     // Attach decoded user information to request object
