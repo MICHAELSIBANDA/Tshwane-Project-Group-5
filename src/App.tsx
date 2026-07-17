@@ -1,67 +1,127 @@
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
+
+// User Context
+type User = {
+  name: string;
+  email: string;
+  initials: string;
+} | null;
+
+type UserContextType = {
+  user: User;
+  setUser: (user: User) => void;
+  logout: () => void;
+};
+
+const UserContext = createContext<UserContextType | undefined>(undefined);
+
+// Custom hook to use user context
+const useUser = () => {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
+};
 
 function App() {
   const [page, setPage] = useState('home');
+  const [user, setUser] = useState<User>(null);
+
+  const logout = () => {
+    setUser(null);
+    setPage('home');
+  };
 
   return (
-    <div style={styles.app}>
-      {/* Navigation */}
-      <header style={styles.navbar}>
-        <div style={styles.logoSection}>
-          <div style={styles.logoBox}></div>
-          <h2 style={styles.logoText}>TshwaneRide</h2>
-        </div>
+    <UserContext.Provider value={{ user, setUser, logout }}>
+      <div style={styles.app}>
+        {/* Navigation */}
+        <header style={styles.navbar}>
+          <div style={styles.logoSection}>
+            <div style={styles.logoBox}></div>
+            <h2 style={styles.logoText}>TshwaneRide</h2>
+          </div>
 
-        <nav style={styles.nav}>
-          <button 
-            style={page === 'home' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
-            onClick={() => setPage('home')}
-          >
-            Home
-          </button>
-          <button 
-            style={page === 'login' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
-            onClick={() => setPage('login')}
-          >
-            Login
-          </button>
-          <button 
-            style={page === 'register' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
-            onClick={() => setPage('register')}
-          >
-            Register
-          </button>
-          <button 
-            style={page === 'wallet' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
-            onClick={() => setPage('wallet')}
-          >
-            Wallet
-          </button>
-        </nav>
+          <nav style={styles.nav}>
+            <button 
+              style={page === 'home' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
+              onClick={() => setPage('home')}
+            >
+              Home
+            </button>
+            <button 
+              style={page === 'login' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
+              onClick={() => setPage('login')}
+            >
+              Login
+            </button>
+            <button 
+              style={page === 'register' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
+              onClick={() => setPage('register')}
+            >
+              Register
+            </button>
+            <button 
+              style={page === 'wallet' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
+              onClick={() => setPage('wallet')}
+            >
+              Wallet
+            </button>
+          </nav>
 
-        <div style={styles.tmCircle}>TM</div>
-      </header>
+          {/* Dynamic User Initials */}
+          <div style={styles.userSection}>
+            {user ? (
+              <div style={styles.userInfo}>
+                <div style={styles.userInitials}>
+                  {user.initials}
+                </div>
+                <span style={styles.userName}>{user.name}</span>
+                <button style={styles.logoutButton} onClick={logout}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div style={styles.tmCircle}>?</div>
+            )}
+          </div>
+        </header>
 
-      {/* Pages */}
-      {page === 'home' && <HomePage setPage={setPage} />}
-      {page === 'login' && <LoginPage setPage={setPage} />}
-      {page === 'register' && <RegisterPage setPage={setPage} />}
-      {page === 'wallet' && <WalletPage setPage={setPage} />}
+        {/* Pages */}
+        {page === 'home' && <HomePage setPage={setPage} />}
+        {page === 'login' && <LoginPage setPage={setPage} />}
+        {page === 'register' && <RegisterPage setPage={setPage} />}
+        {page === 'wallet' && <WalletPage setPage={setPage} />}
 
-      {/* Footer */}
-      <footer style={styles.footer}>
-        © 2026 City of Tshwane — Digital Bus Ticketing System
-      </footer>
-    </div>
+        {/* Footer */}
+        <footer style={styles.footer}>
+          © 2026 City of Tshwane — Digital Bus Ticketing System
+        </footer>
+      </div>
+    </UserContext.Provider>
   );
 }
 
 // Home Page Component
 function HomePage({ setPage }: { setPage: (page: string) => void }) {
-  const [balance, setBalance] = useState(125.00);
+  const [balance] = useState(125.00);
+  const { user } = useUser();
 
   return (
     <div style={styles.homeContent}>
+      {/* Welcome Message */}
+      <div style={styles.welcomeBanner}>
+        <h2 style={styles.welcomeText}>
+          {user ? `Welcome back, ${user.name}! 👋` : 'Welcome to TshwaneRide!'}
+        </h2>
+        {user && (
+          <p style={styles.welcomeSubtext}>
+            Your city, one tap away.
+          </p>
+        )}
+      </div>
+
       {/* Hero */}
       <section style={styles.hero}>
         <div style={styles.heroLeft}>
@@ -156,6 +216,7 @@ function HomePage({ setPage }: { setPage: (page: string) => void }) {
 function LoginPage({ setPage }: { setPage: (page: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { setUser } = useUser();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +224,21 @@ function LoginPage({ setPage }: { setPage: (page: string) => void }) {
       alert('Please fill in all fields');
       return;
     }
+
+    // Simulate login - create user from email
+    const name = email.split('@')[0] || 'User';
+    const initials = name
+      .split(/[._-]/)
+      .map(word => word[0].toUpperCase())
+      .join('')
+      .slice(0, 2);
+
+    setUser({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      email: email,
+      initials: initials || 'U'
+    });
+
     alert('Login Successful!');
     setPage('home');
   };
@@ -211,6 +287,7 @@ function RegisterPage({ setPage }: { setPage: (page: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { setUser } = useUser();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,8 +299,23 @@ function RegisterPage({ setPage }: { setPage: (page: string) => void }) {
       alert('Passwords do not match');
       return;
     }
-    alert('Registration Successful! Please login.');
-    setPage('login');
+
+    // Get user initials from name
+    const initials = name
+      .split(' ')
+      .map(word => word[0].toUpperCase())
+      .join('')
+      .slice(0, 2);
+
+    // Auto-login after registration
+    setUser({
+      name: name,
+      email: email,
+      initials: initials || 'U'
+    });
+
+    alert('Registration Successful! Welcome to TshwaneRide!');
+    setPage('home');
   };
 
   return (
@@ -278,13 +370,14 @@ function RegisterPage({ setPage }: { setPage: (page: string) => void }) {
   );
 }
 
-// Wallet Page Component - Fully Interactive
+// Wallet Page Component
 function WalletPage({ setPage }: { setPage: (page: string) => void }) {
   const [balance, setBalance] = useState(128.00);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [showSuccess, setShowSuccess] = useState(false);
+  const { user } = useUser();
 
   const presetAmounts = [50, 100, 200, 500];
 
@@ -312,11 +405,9 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
       return;
     }
 
-    // Show success message
     setShowSuccess(true);
     setBalance(balance + amount);
     
-    // Reset after 3 seconds
     setTimeout(() => {
       setShowSuccess(false);
       setSelectedAmount(null);
@@ -328,15 +419,15 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
     <div style={styles.walletPage}>
       <div style={styles.walletContainer}>
         <h1 style={styles.walletPageTitle}>Top Up Wallet</h1>
-        <p style={styles.walletPageSubtitle}>Add funds so you're always ready to board.</p>
+        <p style={styles.walletPageSubtitle}>
+          {user ? `Welcome, ${user.name}!` : 'Add funds so you\'re always ready to board.'}
+        </p>
 
-        {/* Current Balance */}
         <div style={styles.currentBalance}>
           <span style={styles.currentBalanceLabel}>Current balance</span>
           <h2 style={styles.currentBalanceAmount}>R{balance.toFixed(2)}</h2>
         </div>
 
-        {/* Amount Selection */}
         <div style={styles.amountSection}>
           <h3 style={styles.amountTitle}>Select amount</h3>
           <div style={styles.amountGrid}>
@@ -371,7 +462,6 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
           </div>
         </div>
 
-        {/* Payment Method */}
         <div style={styles.paymentSection}>
           <h3 style={styles.paymentTitle}>Payment method</h3>
           
@@ -423,7 +513,6 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
           </div>
         </div>
 
-        {/* Summary and Action */}
         <div style={styles.summarySection}>
           <div style={styles.summaryRow}>
             <span style={styles.summaryLabel}>Amount to add</span>
@@ -445,7 +534,6 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
           </div>
         </div>
 
-        {/* Success Message */}
         {showSuccess && (
           <div style={styles.successMessage}>
             <span style={styles.successIcon}>✅</span>
@@ -474,7 +562,7 @@ function WalletPage({ setPage }: { setPage: (page: string) => void }) {
   );
 }
 
-// All styles as a JavaScript object
+// All styles
 const styles: { [key: string]: React.CSSProperties } = {
   app: {
     minHeight: '100vh',
@@ -484,7 +572,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFamily: 'Arial, Helvetica, sans-serif',
   },
   
-  // Navbar
   navbar: {
     background: 'white',
     padding: '20px 40px',
@@ -528,6 +615,41 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderBottom: '2px solid #e8a53d',
     paddingBottom: '6px',
   },
+  userSection: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  userInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  userInitials: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '50%',
+    background: '#7dcf56',
+    color: 'white',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontWeight: 'bold',
+    fontSize: '16px',
+  },
+  userName: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  logoutButton: {
+    background: 'none',
+    border: '1px solid #e2e8f0',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#5d6677',
+  },
   tmCircle: {
     width: '42px',
     height: '42px',
@@ -538,9 +660,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: 'center',
     alignItems: 'center',
     fontWeight: 'bold',
+    fontSize: '18px',
   },
-
-  // Hero
+  welcomeBanner: {
+    padding: '20px 50px 10px 50px',
+    background: 'transparent',
+  },
+  welcomeText: {
+    fontSize: '24px',
+    color: '#1a1a1a',
+    marginBottom: '5px',
+  },
+  welcomeSubtext: {
+    fontSize: '14px',
+    color: '#718096',
+  },
   hero: {
     background: '#5bb53b',
     minHeight: '250px',
@@ -617,8 +751,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   fareAmount: {
     marginTop: '5px',
   },
-
-  // Services
   services: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
@@ -646,8 +778,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#718096',
     fontSize: '14px',
   },
-
-  // Content
   content: {
     display: 'grid',
     gridTemplateColumns: '2fr 1fr',
@@ -676,8 +806,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: 'column',
     gap: '20px',
   },
-
-  // Wallet
   walletCard: {
     background: '#5bb53b',
     color: 'white',
@@ -701,8 +829,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 'bold',
     fontSize: '16px',
   },
-
-  // Notifications
   notificationCard: {
     background: 'white',
     borderRadius: '10px',
@@ -718,8 +844,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#718096',
     fontSize: '14px',
   },
-
-  // Auth Pages
   authPage: {
     flex: 1,
     display: 'flex',
@@ -790,8 +914,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     fontSize: '14px',
   },
-
-  // Wallet Page
   walletPage: {
     flex: 1,
     display: 'flex',
@@ -1006,8 +1128,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#388e3c',
     fontSize: '14px',
   },
-
-  // Footer
   footer: {
     background: '#2e7d32',
     color: 'white',
@@ -1018,5 +1138,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-export default App;
-
+export default App; 
