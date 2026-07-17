@@ -31,6 +31,12 @@ function App() {
           >
             Register
           </button>
+          <button 
+            style={page === 'wallet' ? { ...styles.navButton, ...styles.navActive } : styles.navButton}
+            onClick={() => setPage('wallet')}
+          >
+            Wallet
+          </button>
         </nav>
 
         <div style={styles.tmCircle}>TM</div>
@@ -40,6 +46,7 @@ function App() {
       {page === 'home' && <HomePage setPage={setPage} />}
       {page === 'login' && <LoginPage setPage={setPage} />}
       {page === 'register' && <RegisterPage setPage={setPage} />}
+      {page === 'wallet' && <WalletPage setPage={setPage} />}
 
       {/* Footer */}
       <footer style={styles.footer}>
@@ -51,6 +58,8 @@ function App() {
 
 // Home Page Component
 function HomePage({ setPage }: { setPage: (page: string) => void }) {
+  const [balance, setBalance] = useState(125.00);
+
   return (
     <div style={styles.homeContent}>
       {/* Hero */}
@@ -80,12 +89,12 @@ function HomePage({ setPage }: { setPage: (page: string) => void }) {
 
       {/* Services */}
       <section style={styles.services}>
-        <div style={styles.serviceCard} onClick={() => setPage('home')}>
+        <div style={styles.serviceCard} onClick={() => setPage('wallet')}>
           <div style={styles.icon}></div>
           <h3 style={styles.serviceTitle}>Buy a Ticket</h3>
           <p style={styles.serviceDesc}>Choose a route and pay.</p>
         </div>
-        <div style={styles.serviceCard} onClick={() => setPage('home')}>
+        <div style={styles.serviceCard} onClick={() => setPage('wallet')}>
           <div style={styles.icon}></div>
           <h3 style={styles.serviceTitle}>Top Up Wallet</h3>
           <p style={styles.serviceDesc}>Add funds in seconds.</p>
@@ -127,8 +136,8 @@ function HomePage({ setPage }: { setPage: (page: string) => void }) {
         <div style={styles.rightColumn}>
           <div style={styles.walletCard}>
             <span style={styles.walletLabel}>Wallet balance</span>
-            <h2 style={styles.walletAmount}>R125.00</h2>
-            <button style={styles.walletButton} onClick={() => setPage('home')}>
+            <h2 style={styles.walletAmount}>R{balance.toFixed(2)}</h2>
+            <button style={styles.walletButton} onClick={() => setPage('wallet')}>
               Top up wallet
             </button>
           </div>
@@ -269,12 +278,208 @@ function RegisterPage({ setPage }: { setPage: (page: string) => void }) {
   );
 }
 
+// Wallet Page Component - Fully Interactive
+function WalletPage({ setPage }: { setPage: (page: string) => void }) {
+  const [balance, setBalance] = useState(128.00);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const presetAmounts = [50, 100, 200, 500];
+
+  const handleAmountSelect = (amount: number) => {
+    setSelectedAmount(amount);
+    setCustomAmount('');
+  };
+
+  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomAmount(value);
+    setSelectedAmount(null);
+  };
+
+  const getTotalAmount = (): number => {
+    if (selectedAmount) return selectedAmount;
+    if (customAmount) return parseFloat(customAmount) || 0;
+    return 0;
+  };
+
+  const handleTopUp = () => {
+    const amount = getTotalAmount();
+    if (amount <= 0) {
+      alert('Please select or enter an amount');
+      return;
+    }
+
+    // Show success message
+    setShowSuccess(true);
+    setBalance(balance + amount);
+    
+    // Reset after 3 seconds
+    setTimeout(() => {
+      setShowSuccess(false);
+      setSelectedAmount(null);
+      setCustomAmount('');
+    }, 3000);
+  };
+
+  return (
+    <div style={styles.walletPage}>
+      <div style={styles.walletContainer}>
+        <h1 style={styles.walletPageTitle}>Top Up Wallet</h1>
+        <p style={styles.walletPageSubtitle}>Add funds so you're always ready to board.</p>
+
+        {/* Current Balance */}
+        <div style={styles.currentBalance}>
+          <span style={styles.currentBalanceLabel}>Current balance</span>
+          <h2 style={styles.currentBalanceAmount}>R{balance.toFixed(2)}</h2>
+        </div>
+
+        {/* Amount Selection */}
+        <div style={styles.amountSection}>
+          <h3 style={styles.amountTitle}>Select amount</h3>
+          <div style={styles.amountGrid}>
+            {presetAmounts.map((amount) => (
+              <button
+                key={amount}
+                style={{
+                  ...styles.amountButton,
+                  ...(selectedAmount === amount ? styles.amountButtonSelected : {})
+                }}
+                onClick={() => handleAmountSelect(amount)}
+              >
+                R{amount}
+              </button>
+            ))}
+          </div>
+          
+          <div style={styles.customAmountContainer}>
+            <span style={styles.customAmountLabel}>Or enter a custom amount</span>
+            <div style={styles.customAmountInputWrapper}>
+              <span style={styles.currencySymbol}>R</span>
+              <input
+                type="number"
+                placeholder="0.00"
+                style={styles.customAmountInput}
+                value={customAmount}
+                onChange={handleCustomAmountChange}
+                min="0"
+                step="1"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Method */}
+        <div style={styles.paymentSection}>
+          <h3 style={styles.paymentTitle}>Payment method</h3>
+          
+          <div style={styles.paymentOptions}>
+            <div 
+              style={{
+                ...styles.paymentOption,
+                ...(paymentMethod === 'card' ? styles.paymentOptionSelected : {})
+              }}
+              onClick={() => setPaymentMethod('card')}
+            >
+              <div style={styles.paymentIcon}>💳</div>
+              <div>
+                <div style={styles.paymentName}>Debit / Credit Card</div>
+                <div style={styles.paymentDesc}>Visa, Mastercard</div>
+              </div>
+              {paymentMethod === 'card' && <div style={styles.checkMark}>✓</div>}
+            </div>
+
+            <div 
+              style={{
+                ...styles.paymentOption,
+                ...(paymentMethod === 'eft' ? styles.paymentOptionSelected : {})
+              }}
+              onClick={() => setPaymentMethod('eft')}
+            >
+              <div style={styles.paymentIcon}>🏦</div>
+              <div>
+                <div style={styles.paymentName}>Instant EFT</div>
+                <div style={styles.paymentDesc}>Pay via your bank app</div>
+              </div>
+              {paymentMethod === 'eft' && <div style={styles.checkMark}>✓</div>}
+            </div>
+
+            <div 
+              style={{
+                ...styles.paymentOption,
+                ...(paymentMethod === 'cash' ? styles.paymentOptionSelected : {})
+              }}
+              onClick={() => setPaymentMethod('cash')}
+            >
+              <div style={styles.paymentIcon}>🏪</div>
+              <div>
+                <div style={styles.paymentName}>Cash at Kiosk</div>
+                <div style={styles.paymentDesc}>Top up at a bus depot</div>
+              </div>
+              {paymentMethod === 'cash' && <div style={styles.checkMark}>✓</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* Summary and Action */}
+        <div style={styles.summarySection}>
+          <div style={styles.summaryRow}>
+            <span style={styles.summaryLabel}>Amount to add</span>
+            <span style={styles.summaryValue}>
+              R{getTotalAmount().toFixed(2)}
+            </span>
+          </div>
+          <div style={styles.summaryRow}>
+            <span style={styles.summaryLabel}>Payment method</span>
+            <span style={styles.summaryValue}>
+              {paymentMethod === 'card' ? 'Card' : paymentMethod === 'eft' ? 'EFT' : 'Cash'}
+            </span>
+          </div>
+          <div style={styles.summaryRow}>
+            <span style={styles.summaryLabel}>New balance</span>
+            <span style={styles.summaryValueHighlight}>
+              R{(balance + getTotalAmount()).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Success Message */}
+        {showSuccess && (
+          <div style={styles.successMessage}>
+            <span style={styles.successIcon}>✅</span>
+            <div>
+              <div style={styles.successTitle}>Top up successful!</div>
+              <div style={styles.successDesc}>
+                R{getTotalAmount().toFixed(2)} added to your wallet
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button 
+          style={styles.topUpButton} 
+          onClick={handleTopUp}
+          disabled={getTotalAmount() === 0}
+        >
+          Top Up Now
+        </button>
+
+        <button style={styles.backToHomeButton} onClick={() => setPage('home')}>
+          ← Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // All styles as a JavaScript object
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
   app: {
     minHeight: '100vh',
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     backgroundColor: '#eceef2',
     fontFamily: 'Arial, Helvetica, sans-serif',
   },
@@ -284,13 +489,13 @@ const styles = {
     background: 'white',
     padding: '20px 40px',
     display: 'flex',
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderBottom: '1px solid #ddd',
   },
   logoSection: {
     display: 'flex',
-    alignItems: 'center' as const,
+    alignItems: 'center',
     gap: '12px',
   },
   logoBox: {
@@ -331,7 +536,7 @@ const styles = {
     color: 'white',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center' as const,
+    alignItems: 'center',
     fontWeight: 'bold',
   },
 
@@ -340,8 +545,8 @@ const styles = {
     background: '#5bb53b',
     minHeight: '250px',
     display: 'flex',
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: '40px 60px',
   },
   heroLeft: {
@@ -372,8 +577,8 @@ const styles = {
   },
   routeHeader: {
     display: 'flex',
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: '20px',
     fontWeight: 'bold',
   },
@@ -389,8 +594,8 @@ const styles = {
   },
   ticketInfo: {
     display: 'flex',
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   qrBox: {
     width: '70px',
@@ -399,11 +604,11 @@ const styles = {
     borderRadius: '10px',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center' as const,
+    alignItems: 'center',
     fontWeight: 'bold',
   },
   fare: {
-    textAlign: 'right' as const,
+    textAlign: 'right',
   },
   fareLabel: {
     color: '#738195',
@@ -459,7 +664,7 @@ const styles = {
   },
   route: {
     display: 'flex',
-    justifyContent: 'space-between' as const,
+    justifyContent: 'space-between',
     padding: '15px 0',
     borderBottom: '1px solid #e2e8f0',
   },
@@ -468,7 +673,7 @@ const styles = {
   },
   rightColumn: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     gap: '20px',
   },
 
@@ -519,7 +724,7 @@ const styles = {
     flex: 1,
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center' as const,
+    alignItems: 'center',
     padding: '40px 20px',
     background: '#f4f5f8',
   },
@@ -541,7 +746,7 @@ const styles = {
   },
   authForm: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
   },
   authInput: {
     width: '100%',
@@ -550,7 +755,7 @@ const styles = {
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
     fontSize: '14px',
-    boxSizing: 'border-box' as const,
+    boxSizing: 'border-box',
   },
   authButton: {
     width: '100%',
@@ -565,7 +770,7 @@ const styles = {
   },
   authFooter: {
     marginTop: '20px',
-    textAlign: 'center' as const,
+    textAlign: 'center',
   },
   authFooterText: {
     color: '#718096',
@@ -586,11 +791,227 @@ const styles = {
     fontSize: '14px',
   },
 
+  // Wallet Page
+  walletPage: {
+    flex: 1,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '40px 20px',
+    background: '#f4f5f8',
+  },
+  walletContainer: {
+    background: 'white',
+    maxWidth: '600px',
+    width: '100%',
+    padding: '40px',
+    borderRadius: '15px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+  },
+  walletPageTitle: {
+    marginBottom: '5px',
+    color: '#1a1a1a',
+    fontSize: '28px',
+  },
+  walletPageSubtitle: {
+    color: '#718096',
+    marginBottom: '25px',
+  },
+  currentBalance: {
+    background: '#5bb53b',
+    color: 'white',
+    borderRadius: '10px',
+    padding: '20px',
+    marginBottom: '25px',
+    textAlign: 'center',
+  },
+  currentBalanceLabel: {
+    fontSize: '14px',
+    display: 'block',
+  },
+  currentBalanceAmount: {
+    margin: '10px 0 0',
+    fontSize: '36px',
+  },
+  amountSection: {
+    marginBottom: '25px',
+  },
+  amountTitle: {
+    marginBottom: '15px',
+    fontSize: '18px',
+    color: '#1a1a1a',
+  },
+  amountGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '10px',
+    marginBottom: '15px',
+  },
+  amountButton: {
+    padding: '12px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    background: 'white',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    transition: 'all 0.3s',
+  },
+  amountButtonSelected: {
+    borderColor: '#58b338',
+    background: '#e8f5e9',
+    color: '#2e7d32',
+  },
+  customAmountContainer: {
+    marginTop: '10px',
+  },
+  customAmountLabel: {
+    display: 'block',
+    fontSize: '14px',
+    color: '#718096',
+    marginBottom: '8px',
+  },
+  customAmountInputWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '0 15px',
+    background: 'white',
+  },
+  currencySymbol: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginRight: '10px',
+  },
+  customAmountInput: {
+    flex: 1,
+    padding: '12px 0',
+    border: 'none',
+    fontSize: '16px',
+    outline: 'none',
+    background: 'transparent',
+  },
+  paymentSection: {
+    marginBottom: '25px',
+  },
+  paymentTitle: {
+    marginBottom: '15px',
+    fontSize: '18px',
+    color: '#1a1a1a',
+  },
+  paymentOptions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  paymentOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    padding: '15px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+    position: 'relative',
+  },
+  paymentOptionSelected: {
+    borderColor: '#58b338',
+    background: '#f0f7f0',
+  },
+  paymentIcon: {
+    fontSize: '24px',
+  },
+  paymentName: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+  },
+  paymentDesc: {
+    fontSize: '12px',
+    color: '#718096',
+  },
+  checkMark: {
+    position: 'absolute',
+    right: '15px',
+    color: '#58b338',
+    fontWeight: 'bold',
+    fontSize: '18px',
+  },
+  summarySection: {
+    background: '#f8f9fa',
+    borderRadius: '10px',
+    padding: '20px',
+    marginBottom: '20px',
+  },
+  summaryRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  summaryLabel: {
+    color: '#718096',
+  },
+  summaryValue: {
+    fontWeight: 'bold',
+  },
+  summaryValueHighlight: {
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    fontSize: '18px',
+  },
+  topUpButton: {
+    width: '100%',
+    padding: '14px',
+    background: '#58b338',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'background 0.3s',
+  },
+  backToHomeButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'transparent',
+    color: '#2e7d32',
+    border: '1px solid #2e7d32',
+    borderRadius: '8px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    marginTop: '10px',
+  },
+  successMessage: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    background: '#e8f5e9',
+    padding: '15px',
+    borderRadius: '8px',
+    marginBottom: '15px',
+    border: '1px solid #c8e6c9',
+  },
+  successIcon: {
+    fontSize: '24px',
+  },
+  successTitle: {
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  successDesc: {
+    color: '#388e3c',
+    fontSize: '14px',
+  },
+
   // Footer
   footer: {
     background: '#2e7d32',
     color: 'white',
-    textAlign: 'center' as const,
+    textAlign: 'center',
     padding: '15px',
     fontSize: '14px',
     marginTop: 'auto',
@@ -598,3 +1019,4 @@ const styles = {
 };
 
 export default App;
+
